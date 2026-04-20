@@ -7,7 +7,6 @@ import (
 	"k-synaptic/internal/handlers"
 	"net"
 	"net/http"
-	"strings"
 )
 
 type Server struct {
@@ -36,7 +35,7 @@ func (s *Server) setupRoutes(h *handlers.Handler) {
 	s.router.HandleFunc("/api/delete", s.authMiddleware(h.DeleteFile))
 	s.router.HandleFunc("/api/rename", s.authMiddleware(h.RenameFile))
 	s.router.HandleFunc("/api/mkdir", s.authMiddleware(h.CreateDirectory))
-	s.router.HandleFunc("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
+	s.router.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 }
 
 func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,9 +74,9 @@ func (s *Server) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 func (s *Server) localNetworkOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		host := r.RemoteAddr
-		if idx := strings.LastIndex(host, ":"); idx != -1 {
-			host = host[:idx]
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			host = r.RemoteAddr
 		}
 
 		ip := net.ParseIP(host)
@@ -126,11 +125,50 @@ func (s *Server) Start() error {
 
 	fmt.Printf("Server starting on http://localhost:%d\n", s.config.Port)
 
+	ips := getLocalIPs()
+	if len(ips) > 0 {
+		fmt.Println("WiFi accessible at:")
+		for _, ip := range ips {
+			fmt.Printf("  http://%s:%d\n", ip, s.config.Port)
+		}
+	}
+
 	if s.config.CertFile != "" && s.config.KeyFile != "" {
 		return http.ServeTLS(listener, wrappedHandler, s.config.CertFile, s.config.KeyFile)
 	}
 
 	return http.Serve(listener, wrappedHandler)
+}
+
+func getLocalIPs() []string {
+	var ips []string
+
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ips
+	}
+
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+
+		ip := ipNet.IP.To4()
+		if ip == nil {
+			continue
+		}
+
+		if ip.IsLoopback() {
+			continue
+		}
+
+		if ip.IsPrivate() {
+			ips = append(ips, ip.String())
+		}
+	}
+
+	return ips
 }
 
 func (s *Server) Stop() error {
