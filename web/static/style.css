@@ -188,6 +188,24 @@ html, body {
 	border-color: var(--accent);
 }
 
+.btn-logout {
+	background-color: #dc2626;
+	color: white;
+	border: none;
+	padding: 8px 16px;
+	border-radius: 6px;
+	font-size: 0.9em;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+	background-color: #b91c1c;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
 .btn:active {
 	transform: translateY(0);
 }
