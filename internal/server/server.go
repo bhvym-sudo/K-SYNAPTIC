@@ -584,8 +584,6 @@ const loginHTMLWithError = `<!DOCTYPE html>
     </div>
 </body>
 </html>`
-	return nil
-}
 
 const indexHTML = `<!DOCTYPE html>
 <html lang="en">
